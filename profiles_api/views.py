@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework import filters
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
+from rest_framework.permissions import IsAuthenticated
 
-from . import serializers
-from .models import UserProfile
-from .permissions import UpdateOwnProfile
+from profiles_api import serializers
+from profiles_api.models import UserProfile, ProfileFeedItem
+from profiles_api.permissions import UpdateOwnProfile, UpdateOwnStatus
 
 
 # Create your views here.
@@ -25,6 +26,23 @@ class UserProfileViewSet(ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email',)
 
+
 class UserLoginAPIView(ObtainAuthToken):
     """Handle creating user authentication tokens, displaying login"""
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+
+class UserProfileFeedViewSet(ModelViewSet):
+    """Handles CRUD profile feed items"""
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (
+        UpdateOwnStatus,
+        IsAuthenticated,
+    )
+    serializer_class = serializers.ProfileFeedItemSerializer
+    queryset = ProfileFeedItem.objects.all()
+
+    def perform_create(self, serializer):
+        """Sets the user_profile field to the logged in user"""
+        """Gets called when POST, to create new obj"""
+        serializer.save(user_profile = self.request.user)
